@@ -3,6 +3,12 @@
 #include <stdio.h>
 #include <ArduinoLog.h>             //  ..\libraries\ArduinoLog\ArduinoLog.h	https://github.com/thijse/Arduino-Log/
 
+int freeRam ()
+{
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
 
 char* sprintTime4(char* s, unsigned long v)
 {
@@ -79,18 +85,22 @@ const  char PROGMEM	STR_sd_CR[]		= ("%s (line:%d)" CR);
 const  char PROGMEM	STR_SXd_CR[]	= ("%S %X (line:%d)" CR);
 
 
-LCD_misc::LCD_misc(int i2cAddr, Chrono *timeout, int timout_sec)
+LCD_misc::LCD_misc(int i2cAddr, int timout_sec, CHRONO *timeout)
 	: LiquidCrystal_PCF8574(i2cAddr)
 	, _timeout(timeout)
-	, _timout_interval(timout_sec)
+	, _timout_interval(timout_sec*1000)
+	, _need_destroy(false)
 {
-	if (&_timeout == NULL)
+	if (_timeout == NULL)
 	{
-		_timeout = new Chrono(Chrono::SECONDS);
+		// _timeout = new Chrono(Chrono::SECONDS);
+		_timeout = new CHRONO(
+		#if CHRONO == Chrono
+		Chrono::SECONDS
+		#endif
+		);
 		_need_destroy = true;
 	}
-	else
-		_need_destroy = false;
 }
 	
 LCD_misc::~LCD_misc()
@@ -117,7 +127,7 @@ void LCD_misc::on(bool timeout)
 
 }
 
-void LCD_misc::printL(char buf[], unsigned int line)
+void LCD_misc::print(char buf[], unsigned int line)
 {
   print(buf);
   Log.notice( FPSTR(STR_sd_CR), buf, line);
@@ -128,4 +138,16 @@ void LCD_misc::printP(const char* buf, unsigned int line)
   print( FPSTR(buf) );
   Log.notice( FPSTR(STR_SXd_CR), FPSTR(buf), 0, line);
 }
+
+char Clockwise::getNext()
+{
+	if ( ++_cnt >= _charset_len ) _cnt=0;
+	return _clockwise_charset[ _cnt ];
+}
+
+char* printDecF(char *buf, int d, char decimal)
+{
+	return sprintf(buf, "%d.%d", d/decimal, d%decimal), buf;
+}
+
 
