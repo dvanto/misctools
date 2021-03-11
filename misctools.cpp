@@ -106,9 +106,7 @@ LCD_misc::LCD_misc(int i2cAddr, int timout_sec, CHRONO *timeout)
 LCD_misc::~LCD_misc()
 { 
 	if (_need_destroy) 
-	{
 		delete _timeout;
-	}
 }
 
 void LCD_misc::on(bool timeout)
@@ -149,5 +147,7 @@ char* printDecF(char *buf, int d, char decimal)
 {
 	return sprintf(buf, "%d.%d", d/decimal, d%decimal), buf;
 }
+
+
 
 

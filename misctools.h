@@ -7,19 +7,28 @@
 #include <Chrono.h> // ..\Chrono\Chrono.h
 #include <LightChrono.h> // ..\Chrono\Chrono.h
 
+#include <Rtttl.h>
+
 // #define CHRONO LightChrono
 #define CHRONO Chrono
 
 // https://arduino-esp8266.readthedocs.io/en/latest/PROGMEM.html
 #include <avr/pgmspace.h>
 #include <WString.h>
+
 #define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
+#define FSTR(name, value) const char PROGMEM name[] = (value)
+
 /* для работы со сторками из ПЗУ */
 typedef __FlashStringHelper* fchar;
 typedef const __FlashStringHelper* fchar_c;
 
 //#define FF(a) 	(a)		// для отладки, переключение на строки в RAM
 #define FF(a)       F(a)
+
+#define SETFLAG(x) ( ++(x)?(x):(++(x)) )  // если увеличение дало 0, то увеличиваем еще раз
+
+typedef unsigned long	t_time;
 
 // экран с выключением подсветки по таймеру и функциями отладочной печати
 class LCD_misc: public LiquidCrystal_PCF8574
@@ -71,7 +80,6 @@ int freeRam ();
 
 // буфера должно быть достаточно для печати %d.%d
 char* printDecF(char *buf, int d, char decimal=10);
-
 #define DEFAULT_CHARSET " \xDF-\x2B\x2A"
 
 class Clockwise
@@ -89,6 +97,44 @@ private:
 	const char*	_clockwise_charset;
 	char		_charset_len;
 	char 		_cnt;
+};
+
+// используйет FSTR для задания мелодий в PROGMEM
+class Alarm: public Rtttl
+{
+	unsigned char	_alarms = 1;
+	const char*		_song = NULL;
+public:
+	Alarm(int pin): Rtttl(pin) {}
+	
+	// используйет FSTR для задания мелодий в PROGMEM
+	bool armed(unsigned char restart = 0, const char*	song = NULL)
+	{
+		return restart?(_song=song,_alarms=restart):_alarms;
+	}
+	
+	void alarmOnce(const char* song = NULL)
+	{
+		if (_alarms)
+			alarm(song);
+	}
+	
+	void alarm(const char* song = NULL)
+	{
+		if (song != NULL || (song=_song) != NULL )
+		{
+			// _FLASH_STRING(s, song);
+			play( _FLASH_STRING( song ) );
+			while (updateMelody());
+		}
+		else
+		{
+			// если мелодия не задана, пишать как психованный
+			TimerFreeTone(_buzzerPin, 1400, 2000);
+		}
+		
+		if (_alarms) _alarms--;
+	}
 };
 
 #endif
