@@ -7,23 +7,25 @@
 #include <WString.h>
 
 #include <ArduinoLog.h>             //  ..\libraries\ArduinoLog\ArduinoLog.h	https://github.com/thijse/Arduino-Log/
+// #include <DebounceEvent.h>          // https://github.com/xoseperez/debounceevent
 
 #include <LiquidCrystal_PCF8574.h>
 
 #include <Rtttl.h>
 
+
 #include <Chrono.h> // ..\Chrono\Chrono.h
 #include <LightChrono.h> // ..\Chrono\Chrono.h
-
 // #define CHRONO LightChrono
 #define CHRONO Chrono
+
 
 #define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
 #define FSTR(name, value) const char PROGMEM name[] = (value)
 
 /* для работы со сторками из ПЗУ */
-typedef __FlashStringHelper* fchar;
-typedef const __FlashStringHelper* fchar_c;
+typedef __FlashStringHelper*		fchar;
+typedef const __FlashStringHelper*	fchar_c;
 
 #ifndef FF
 //#define FF(a) 	(a)		// для отладки, переключение на строки в RAM
@@ -82,6 +84,11 @@ inline char sw(bool f, char c = '\xFF') // полный квадратик на дисплее
 
 int freeRam ();
 
+// не забудь про ISR (PCINT?_vect) { }
+// для 8..13 - PCINT0_vect, для A0..A5 - PCINT1_vect, для 0..7 - PCINT2_vect
+void pciSetup(byte pin);
+
+
 // буфера должно быть достаточно для печати %d.%d
 char* printDecF(char *buf, int d, char decimal=10);
 #define DEFAULT_CHARSET " \xDF-\x2B\x2A"
@@ -116,6 +123,7 @@ public:
 	{
 		if (restart)
 		{
+			Log.notice( FF("Alarm::armed a=%d -> %d s=%X -> %X" CR), _alarms, restart, song, _song);
 			_alarms=restart;
 			if (song) _song=song;
 		}
@@ -145,8 +153,32 @@ public:
 		}
 		
 		if (_alarms) _alarms--;
+		else{
+			Log.notice( FF("Alarm::disarmed a=%d s=%X" CR), _alarms, _song);
+		}
 	}
 };
+
+
+
+  /*
+    // разрешение прерываний INT0 и INT1
+    //  EIMSK  =  (1<<INT0)  | (1<<INT1);
+
+    // настройка срабатывания прерываний на любому изменению
+    //EICRA  =  (0<<ISC11) | (1<<ISC10) | (0<<ISC01) | (1<<ISC00);
+
+  	PORTD |= (1 << PORTD5) | (1 << PORTD6) | (1 << PORTD6);
+    PORTB |= (1 << PORTB2);
+
+    // разрешение прерываний с портов B (PCINT[7:0]) и D (PCINT[23:16]), и запрет с порта C (PCINT[14:8])
+    PCICR  |= (1 << PCIE2) | (0 << PCIE1) | (1 << PCIE0);
+
+    // маскирование всех ног, кроме PB0 и PD7 - по одной на PCINT0 и PCINT2
+    PCMSK0 |= (0 << PCINT7)  | (0 << PCINT6)  | (0 << PCINT5)  | (0 << PCINT4)  | (0 << PCINT3)  | (1 << PCINT2)  | (0 << PCINT1)  | (0 << PCINT0);
+    //PCMSK1 |=                (0 << PCINT14) | (0 << PCINT13) | (0 << PCINT12) | (0 << PCINT11) | (0 << PCINT10) | (0 << PCINT9)  | (0 << PCINT8);
+    PCMSK2 |= (1 << PCINT23) | (1 << PCINT22) | (1 << PCINT21) | (0 << PCINT20) | (0 << PCINT19) | (0 << PCINT18) | (0 << PCINT17) | (0 << PCINT16);
+  */
 
 #endif
 

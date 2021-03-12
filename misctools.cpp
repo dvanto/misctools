@@ -9,6 +9,14 @@ int freeRam ()
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
 
+// не забудь про ISR (PCINT?_vect) { }
+// для 8..13 - PCINT0_vect, для A0..A5 - PCINT1_vect, для 0..7 - PCINT2_vect
+void pciSetup(byte pin) {
+	*digitalPinToPCMSK(pin) |= bit (digitalPinToPCMSKbit(pin));  // Разрешаем PCINT для указанного пина
+	PCIFR  |= bit (digitalPinToPCICRbit(pin)); // Очищаем признак запроса прерывания для соответствующей группы пинов
+	PCICR  |= bit (digitalPinToPCICRbit(pin)); // Разрешаем PCINT для соответствующей группы пинов
+}
+
 char* sprintTime4(char* s, unsigned long v)
 {
   if (v < 900)
@@ -75,10 +83,15 @@ char* sprintTime5(char* s, unsigned long v)
     sprintf(s, ("%04uh"),  		(unsigned) v / 3600 );     // 0000h
   }
 
-
   return s;
 }
 
+char* printDecF(char *buf, int d, char decimal)
+{
+	return sprintf(buf, "%d.%d", d/decimal, d%decimal), buf;
+}
+
+//***********************************************************************************************************************************************************
 
 const  char PROGMEM	STR_sd_CR[]		= ("%s (line:%d)" CR);
 const  char PROGMEM	STR_SXd_CR[]	= ("%S %X (line:%d)" CR);
@@ -142,11 +155,8 @@ char Clockwise::getNext()
 	return _clockwise_charset[ _cnt ];
 }
 
-char* printDecF(char *buf, int d, char decimal)
-{
-	return sprintf(buf, "%d.%d", d/decimal, d%decimal), buf;
-}
 
 
+//***********************************************************************************************************************************************************
 
 
