@@ -1,7 +1,6 @@
 #include <misctools.h>
 
 #include <stdio.h>
-#include <ArduinoLog.h>             //  ..\libraries\ArduinoLog\ArduinoLog.h	https://github.com/thijse/Arduino-Log/
 
 int freeRam ()
 {

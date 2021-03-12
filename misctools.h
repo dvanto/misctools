@@ -2,19 +2,21 @@
 #ifndef _MISCTOOLS_H_
 #define _MISCTOOLS_H_
 
-// #include "Print.h"
+
+#include <avr/pgmspace.h>	// https://arduino-esp8266.readthedocs.io/en/latest/PROGMEM.html
+#include <WString.h>
+
+#include <ArduinoLog.h>             //  ..\libraries\ArduinoLog\ArduinoLog.h	https://github.com/thijse/Arduino-Log/
+
 #include <LiquidCrystal_PCF8574.h>
-#include <Chrono.h> // ..\Chrono\Chrono.h
-#include <LightChrono.h> // ..\Chrono\Chrono.h
 
 #include <Rtttl.h>
 
+#include <Chrono.h> // ..\Chrono\Chrono.h
+#include <LightChrono.h> // ..\Chrono\Chrono.h
+
 // #define CHRONO LightChrono
 #define CHRONO Chrono
-
-// https://arduino-esp8266.readthedocs.io/en/latest/PROGMEM.html
-#include <avr/pgmspace.h>
-#include <WString.h>
 
 #define FPSTR(pstr_pointer) (reinterpret_cast<const __FlashStringHelper *>(pstr_pointer))
 #define FSTR(name, value) const char PROGMEM name[] = (value)
@@ -23,8 +25,10 @@
 typedef __FlashStringHelper* fchar;
 typedef const __FlashStringHelper* fchar_c;
 
+#ifndef FF
 //#define FF(a) 	(a)		// для отладки, переключение на строки в RAM
 #define FF(a)       F(a)
+#endif
 
 #define SETFLAG(x) ( ++(x)?(x):(++(x)) )  // если увеличение дало 0, то увеличиваем еще раз
 
@@ -47,7 +51,7 @@ public:
 private:
 	CHRONO*	_timeout;
 	CHRONO::chrono_t	_timout_interval;
-	bool			_need_destroy;
+	bool				_need_destroy;
 	
 };
 
@@ -110,7 +114,13 @@ public:
 	// используйет FSTR для задания мелодий в PROGMEM
 	bool armed(unsigned char restart = 0, const char*	song = NULL)
 	{
-		return restart?(_song=song,_alarms=restart):_alarms;
+		if (restart)
+		{
+			_alarms=restart;
+			if (song) _song=song;
+		}
+		
+		return _alarms;
 	}
 	
 	void alarmOnce(const char* song = NULL)
@@ -121,6 +131,7 @@ public:
 	
 	void alarm(const char* song = NULL)
 	{
+		Log.notice( FF("Alarm::alarm s=%X _s=%X a=%d" CR), song, _song, _alarms);
 		if (song != NULL || (song=_song) != NULL )
 		{
 			// _FLASH_STRING(s, song);
