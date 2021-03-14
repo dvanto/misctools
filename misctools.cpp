@@ -101,7 +101,6 @@ LCD_misc::LCD_misc(int i2cAddr, int timout_sec, CHRONO *timeout)
 	: LiquidCrystal_PCF8574(i2cAddr)
 	, _timeout(timeout)
 	, _timout_interval(timout_sec*1000)
-	, _need_destroy(false)
 {
 	if (_timeout == NULL)
 	{
@@ -137,16 +136,30 @@ void LCD_misc::on(bool timeout)
 
 }
 
-void LCD_misc::print(char buf[], unsigned int line)
+int LCD_misc::print(const char buf[], unsigned int line)
 {
-  print(buf);
+  int i = print(buf);
   Log.notice( FPSTR(STR_sd_CR), buf, line);
+  return i;
 }
 
-void LCD_misc::printP(const char* buf, unsigned int line)
+int LCD_misc::printf(const char buf[], ... )
 {
-  print( FPSTR(buf) );
-  Log.notice( FPSTR(STR_SXd_CR), FPSTR(buf), 0, line);
+	char _buf [MAX_PRINTF_BUF_SIZE];
+	va_list argptr;
+	va_start (argptr, buf);
+	
+	int i = sprintf(_buf, buf, argptr ); // тут надо проверять
+	print( _buf);
+	Log.notice( _buf );
+	return i;
+}
+
+int LCD_misc::printP(const char* buf, unsigned int line)
+{
+  int i = print( FPSTR(buf) );
+  Log.notice( FPSTR(STR_SXd_CR), buf, 0, line);
+  return i;
 }
 
 char Clockwise::getNext()

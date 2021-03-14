@@ -36,6 +36,39 @@ typedef const __FlashStringHelper*	fchar_c;
 
 typedef unsigned long	t_time;
 
+
+// печать времени в 4 символа
+// буфер должен быть достаточного размера
+// 000s -> 000m -> 0.0h -> 000h
+char* sprintTime4(char* s, unsigned long v);
+
+// печать времени в 5 символов
+// буфер должен быть достаточного размера
+// 0000s -> 00.0m -> 0.00h -> 00:00 -> 0000h
+char* sprintTime5(char* s, unsigned long v);
+
+// буфера должно быть достаточно для печати %d.%d
+char* printDecF(char *buf, int d, char decimal=10);
+
+inline char sw(bool f, char c = '\xFF') // полный квадратик на дисплее
+{
+  return f ? c : '_';
+}
+
+// возвращает размер свободной памяти
+int freeRam ();
+
+// не забудь про ISR (PCINT?_vect) { }
+// для 8..13 - PCINT0_vect, для A0..A5 - PCINT1_vect, для 0..7 - PCINT2_vect
+void pciSetup(byte pin);
+
+inline void decItem(int& inputItem, int limit, int delta=1)	{	if ( (inputItem -= delta) < limit ) inputItem = limit;	}
+
+inline void incItem(int& inputItem, int limit, int delta=1)	{	if ( (inputItem += delta) > limit ) inputItem = limit;	}
+
+
+// ************************************************************************************************************
+
 // экран с выключением подсветки по таймеру и функциями отладочной печати
 class LCD_misc: public LiquidCrystal_PCF8574
 {
@@ -45,15 +78,19 @@ public:
 	
 	inline CHRONO &timeout () { return *_timeout;}
 	void on(bool timeout = false);
+	void clear(char screen=0) { if (screen!=_screen) { LiquidCrystal_PCF8574::clear(); _screen=screen; } }
 	
 	using LiquidCrystal_PCF8574::print;	
-	void print(char buf[], unsigned int line);
-	void printP(const char* buf, unsigned int line);	
+	int print(const char buf[], unsigned int line);
+#define	MAX_PRINTF_BUF_SIZE	32
+	int printf(const char *__fmt, ... );
+	int printP(const char* buf, unsigned int line);	
 	
 private:
 	CHRONO*	_timeout;
 	CHRONO::chrono_t	_timout_interval;
-	bool				_need_destroy;
+	bool				_need_destroy		= false;
+	char				_screen				= 0;
 	
 };
 
@@ -67,31 +104,11 @@ usage:
   }
  */
 
-// печать времени в 4 символа
-// буфер должен быть достаточного размера
-// 000s -> 000m -> 0.0h -> 000h
-char* sprintTime4(char* s, unsigned long v);
 
-// печать времени в 5 символов
-// буфер должен быть достаточного размера
-// 0000s -> 00.0m -> 0.00h -> 00:00 -> 0000h
-char* sprintTime5(char* s, unsigned long v);
-
-inline char sw(bool f, char c = '\xFF') // полный квадратик на дисплее
-{
-  return f ? c : '_';
-}
-
-int freeRam ();
-
-// не забудь про ISR (PCINT?_vect) { }
-// для 8..13 - PCINT0_vect, для A0..A5 - PCINT1_vect, для 0..7 - PCINT2_vect
-void pciSetup(byte pin);
+// ************************************************************************************************************
 
 
-// буфера должно быть достаточно для печати %d.%d
-char* printDecF(char *buf, int d, char decimal=10);
-#define DEFAULT_CHARSET " \xDF-\x2B\x2A"
+#define	DEFAULT_CHARSET	" \xDF-\x2B\x2A"
 
 class Clockwise
 {
@@ -109,6 +126,9 @@ private:
 	char		_charset_len;
 	char 		_cnt;
 };
+
+
+// ************************************************************************************************************
 
 // используйет FSTR для задания мелодий в PROGMEM
 class Alarm: public Rtttl
@@ -131,34 +151,38 @@ public:
 		return _alarms;
 	}
 	
-	void alarmOnce(const char* song = NULL)
+	void alarmOnce(const char* song = NULL, bool play_immediatly = true)
 	{
 		if (_alarms)
-			alarm(song);
+		{
+			_alarms--;
+			alarm(song, play_immediatly);
+		}
+		else{
+			Log.notice( FF("Alarm::disarmed a=%d s=%X" CR), _alarms, _song);
+		}
 	}
 	
-	void alarm(const char* song = NULL)
+	void alarm(const char* song = NULL, bool play_immediatly = true)
 	{
 		Log.notice( FF("Alarm::alarm s=%X _s=%X a=%d" CR), song, _song, _alarms);
+
 		if (song != NULL || (song=_song) != NULL )
 		{
 			// _FLASH_STRING(s, song);
 			play( _FLASH_STRING( song ) );
-			while (updateMelody());
+			if (play_immediatly) 
+				while (updateMelody());
 		}
 		else
 		{
 			// если мелодия не задана, пишать как психованный
 			TimerFreeTone(_buzzerPin, 1400, 2000);
 		}
-		
-		if (_alarms) _alarms--;
-		else{
-			Log.notice( FF("Alarm::disarmed a=%d s=%X" CR), _alarms, _song);
-		}
 	}
 };
 
+// ************************************************************************************************************
 
 
   /*
